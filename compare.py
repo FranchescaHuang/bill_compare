@@ -24,6 +24,7 @@ llm = DeepSeek(
 )
 
 
+# 自定义Logger类同步输出到终端和文件，保留完整执行痕迹
 class Logger:
     def __init__(self, filename):
         self.terminal = sys.stdout
@@ -37,15 +38,18 @@ class Logger:
         self.terminal.flush()
         self.log.flush()
 
+
+# 异步主函数架构
 async def main():
     # 生成带时间戳的文件名（精确到分）
     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
     log_filename = f"comparison_log_{timestamp}.txt"
-    
+
     # 重定向 stdout
     sys.stdout = Logger(log_filename)
-    
+
     try:
+        # MCP 服务集成
         # 2. 连接到 MCP Server (Model Context Protocol)
         # BasicMCPClient 会通过 stdio 与 my_finance_mcp_server.py 进行交互
         mcp_client = BasicMCPClient(
@@ -59,7 +63,7 @@ async def main():
         mcp_tools = await mcp_spec.to_tool_list_async()
 
         # 4. 准备本地数据与工具 (PandasQueryEngine)
-        # internal_df: 公司内部系统的记录
+        # internal_df: 公司内部系统的数据集创建查询引擎
         internal_df = pd.DataFrame({
             "trans_id": ["T101", "T102", "T103"],
             "date": ["2023-10-01", "2023-10-02", "2023-10-03"],
@@ -75,10 +79,10 @@ async def main():
             "bank_desc": ["SBUX #4829 SEATTLE", "APPLE.COM/BILL", "AIRLINE TICKETS"]
         })
 
-        # 创建 Pandas 查询引擎，让 LLM 可以通过自然语言查询 DataFrame
+        # 创建 Pandas 查询引擎，自然语言查询：PandasQueryEngine让LLM能用自然语言查询结构化数据
         internal_engine = PandasQueryEngine(df=internal_df, llm=llm, verbose=True)
         bank_engine = PandasQueryEngine(df=bank_df, llm=llm, verbose=True)
-
+        # 工具封装：通过QueryEngineTool添加元数据描述，帮助LLM理解数据结构
         local_tools = [
             QueryEngineTool(
                 query_engine=internal_engine,
@@ -96,7 +100,7 @@ async def main():
             ),
         ]
 
-        # 5. 合并 MCP 工具和本地 Pandas 工具，并创建 Agent
+        # 5. 合并 MCP 工具和本地 Pandas 工具，并创建 Agent智能体
         all_tools = mcp_tools + local_tools
 
         agent = FunctionAgent(
@@ -120,9 +124,9 @@ async def main():
         response = await handler
         print("\n--- AI 对账结论 ---")
         print(response)
-        
+
         print(f"\n[系统通知] 日志已保存至: {log_filename}")
-    
+
     finally:
         # 恢复 stdout 并关闭日志文件
         if isinstance(sys.stdout, Logger):
