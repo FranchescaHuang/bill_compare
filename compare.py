@@ -119,7 +119,7 @@ async def main():
         # 6. 执行对账指令
         print("\n--- 开始对账任务 ---")
         handler = agent.run(
-            "请帮我核对 'Business Flight' 这笔交易。内部记录是 3000 元，看看银行账单是否有对应项，并解释任何差异。"
+            "请帮我核对内部记录和银行账单中的所有交易。请逐一对比各项，解释任何金额、日期或描述上的差异，并给出完整的对账报告。"
         )
         response = await handler
         print("\n--- AI 对账结论 ---")
